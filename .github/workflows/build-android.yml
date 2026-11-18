@@ -1,43 +1,75 @@
-name: Build Android APK
+
+name: Build RAP EMPIRE Android APK
 
 on:
   push:
-    branches: [ main, master ]
+    branches: [main, master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
   build:
+    name: Build Android APK
     runs-on: ubuntu-latest
+
     steps:
-      - name: Klonowanie repozytorium
+      - name: Pobranie repozytorium
         uses: actions/checkout@v4
 
-      - name: Instalacja Java (JDK 17)
+      - name: Instalacja Java JDK 17
         uses: actions/setup-java@v4
         with:
-          distribution: 'temurin'
+          distribution: temurin
           java-version: '17'
+          cache: gradle
 
-      - name: Konfiguracja Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 18
-
-      - name: Pobranie zależności i budowanie projektu Capacitora
+      - name: Sprawdzenie plików projektu
         run: |
-          npm init -y
-          npm install @capacitor/core @capacitor/cli @capacitor/android
-          mkdir -p android/app/src/main/assets/public
-          cp -r *.html *.png android/app/src/main/assets/public/ 2>/dev/null || true
-          npx cap sync android
+          test -d android || {
+            echo "ERROR: Brak katalogu android"
+            exit 1
+          }
 
-      - name: Nadanie uprawnień i kompilacja APK przez Gradle
+          test -f android/gradlew || {
+            echo "ERROR: Brak pliku gradlew"
+            exit 1
+          }
+
+          test -f index.html || {
+            echo "ERROR: Brak index.html w katalogu glownym"
+            exit 1
+          }
+
+      - name: Kopiowanie plikow gry
+        run: |
+          mkdir -p android/app/src/main/assets/public
+
+          rsync -av \
+            --exclude='.git/' \
+            --exclude='.github/' \
+            --exclude='android/' \
+            --exclude='node_modules/' \
+            --exclude='package.json' \
+            --exclude='package-lock.json' \
+            --exclude='capacitor.config.*' \
+            ./ android/app/src/main/assets/public/
+
+      - name: Kompilacja aplikacji Android
         run: |
           cd android
           chmod +x gradlew
-          ./gradlew assembleDebug
+          ./gradlew assembleDebug --no-daemon
 
-      - name: Zapisanie pliku APK jako artefaktu
+      - name: Sprawdzenie pliku APK
+        run: |
+          test -f android/app/build/outputs/apk/debug/app-debug.apk
+
+      - name: Zapisanie APK
         uses: actions/upload-artifact@v4
         with:
-          name: rap-empire-apk
+          name: RAP-EMPIRE-APK
           path: android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 14
