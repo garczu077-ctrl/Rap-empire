@@ -20,13 +20,14 @@ jobs:
         run: |
           npm init -y
           npm install @capacitor/core @capacitor/cli @capacitor/android
-          npx cap init RapEmpire com.rapempire.game --web-dir .
-          npx cap add android
-          npx cap sync android
+          npx @capacitor/cli init RapEmpire com.rapempire.game --web-dir . --npm-client npm
+          npx @capacitor/cli add android
+          npx @capacitor/cli sync android
 
       - name: Kompilacja pliku APK przez Gradle
         run: |
           cd android
+          chmod +x gradlew
           ./gradlew assembleDebug
 
       - name: Zapisanie pliku APK jako artefaktu
