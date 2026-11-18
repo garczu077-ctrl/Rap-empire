@@ -11,20 +11,26 @@ jobs:
       - name: Klonowanie repozytorium
         uses: actions/checkout@v4
 
+      - name: Instalacja Java (JDK 17)
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
       - name: Konfiguracja Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 18
 
-      - name: Instalacja narzędzi i Capacitora
+      - name: Pobranie zależności i budowanie projektu Capacitora
         run: |
           npm init -y
           npm install @capacitor/core @capacitor/cli @capacitor/android
-          npx @capacitor/cli init RapEmpire com.rapempire.game --web-dir . --npm-client npm
-          npx @capacitor/cli add android
-          npx @capacitor/cli sync android
+          mkdir -p android/app/src/main/assets/public
+          cp -r *.html *.png android/app/src/main/assets/public/ 2>/dev/null || true
+          npx cap sync android
 
-      - name: Kompilacja pliku APK przez Gradle
+      - name: Nadanie uprawnień i kompilacja APK przez Gradle
         run: |
           cd android
           chmod +x gradlew
